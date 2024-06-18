@@ -1,0 +1,43 @@
+Section Table（节表）是记录PE文件中各个节的详细信息的集合，其每个成员是struct _IMAGE_SECTION_HEADER结构体，即节表是一个结构体数组来维护，属于线性结构。而节表的相对起始位置为：紧接着可选PE表。即：DOS头 + 中间空闲及垃圾数据 + NT头（三部分：4字节签名+标准PE头20字节+可选PE头）。
+
+#define IMAGE_SIZEOF_SIGNATURE 4
+#define IMAGE_SIZEOF_FILE_HEADER 20
+
+用变量描述节标配偏移地址为（这是相对于文件首/ImageBase的偏移量）：
+
+SectionTableStart =
+_IMAGE_DOS_HEADER.e_lfanew +
+IMAGE_SIZEOF_SIGNATURE +
+IMAGE_SIZEOF_FILE_HEADER +
+_IMAGE_FILE_HEADER.SizeOfOptionalHeader
+
+#define IMAGE_SIZEOF_SHORT_NAME              8
+typedef struct _IMAGE_SECTION_HEADER{
+    0X00 BYTE    Name[IMAGE_SIZEOF_SHORT_NAME];	//节（段）的名字.text/.data/.rdata/.cmd等。
+												//由于长度固定8字节，所以可以没有\0结束符，因此不能用char *直接打印
+    0X08 union{
+            DWORD   PhysicalAddress;		//物理地址
+            DWORD   VirtualSize;			//虚拟大小
+    }Misc;//存储的是该节在没有对齐前的真实尺寸,可改,不一定准确(可干掉)
+    0X0C DWORD   VirtualAddress;			//块的RVA，相对虚拟地址
+    0X10 DWORD   SizeOfRawData;				//该节在文件对齐后的尺寸大小(FileAlignment的整数倍)
+    0X14 DWORD   PointerToRawData;      	//节区在文件中的偏移量
+    //0X18 DWORD   PointerToRelocations;    //重定位偏移(obj中使用)
+    //0X1C DWORD   PointerToLinenumbers;    //行号表偏移(调试用)
+    //0X20 WORD    NumberOfRelocations;     //重定位项目数(obj中使用)
+    //0X22 WORD    NumberOfLinenumbers;		//行号表中行号的数目
+    0X24 DWORD   Characteristics;			//节属性(按bit位设置属性)
+} IMAGE_SECTION_HEADER, *PIMAGE_SECTION_HEADER;
+#define IMAGE_SIZEOF_SECTION_HEADER          40
+
+一个结构体大小为40字节（IMAGE_SIZEOF_SECTION_HEADER），因此节表的大小为节表元素个数乘以结构体大小为：_IMAGE_FILE_HEADER.NumberOfSections * IMAGE_SIZEOF_SECTION_HEADER。而整个头大小（包含节表）为：
+
+SizeOfHeaders = SectionTableStart + SizeOfSectionTable =
+_IMAGE_DOS_HEADER.e_lfanew +
+IMAGE_SIZEOF_SIGNATURE +
+IMAGE_SIZEOF_FILE_HEADER +
+_IMAGE_FILE_HEADER.SizeOfOptionalHeader +
+（_IMAGE_FILE_HEADER.NumberOfSections * IMAGE_SIZEOF_SECTION_HEADER）
+————————————————
+版权声明：本文为CSDN博主「Apollon_krj」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/apollon_krj/article/details/77095776
