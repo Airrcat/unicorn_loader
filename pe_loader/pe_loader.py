@@ -17,7 +17,7 @@ class pe_loader(object):
             self.mode = mode
             #print("target : %s | mode code %s:" % (filename, mode))
         else:
-            print("mode para error! just recv UC_MODE_32 and UC_MODE_64")
+            print("mode para error! just recvive UC_MODE_32 and UC_MODE_64")
 
         self.image = f.read()
         #print("target read finish")
@@ -30,9 +30,23 @@ class pe_loader(object):
                                  self.IMAGE_SIZEOF_SIGNATURE + \
                                  self.IMAGE_SIZEOF_FILE_HEADER + \
                                  int.from_bytes(self.pe_nt_header.SizeOfOptionalHeader, 'little')
-            self.pe_section_header = pe32_section_header(
+            self.pe_section_header = pe_section_header(
                 self.image[offset_of_section_header:offset_of_section_header + int.from_bytes(self.pe_nt_header.NumberOfSections,
                                                                                   'little') * 40],
+                int.from_bytes(self.pe_nt_header.NumberOfSections, 'little'))
+        elif mode == unicorn.UC_MODE_64:
+            self.pe_dos_header = pe_dos_header(self.image)
+            self.pe_nt_header = pe_nt_header(self.image[int.from_bytes(self.pe_dos_header.e_lfanew, 'little'):])
+            self.pe_optional_header = pe64_optional_header(
+            self.image[int.from_bytes(self.pe_dos_header.e_lfanew, 'little') + 0x18:])
+            offset_of_section_header = int.from_bytes(self.pe_dos_header.e_lfanew, 'little') + \
+                                       self.IMAGE_SIZEOF_SIGNATURE + \
+                                       self.IMAGE_SIZEOF_FILE_HEADER + \
+                                       int.from_bytes(self.pe_nt_header.SizeOfOptionalHeader, 'little')
+            self.pe_section_header = pe_section_header(
+                self.image[
+                offset_of_section_header:offset_of_section_header + int.from_bytes(self.pe_nt_header.NumberOfSections,
+                                                                                   'little') * 40],
                 int.from_bytes(self.pe_nt_header.NumberOfSections, 'little'))
         #print("pe loaded.")
         f.close()
@@ -166,7 +180,7 @@ class pe32_optional_header:
         self.LoaderFlags = image[self.offset['LoaderFlags']:self.offset['LoaderFlags'] + self.dword]
         self.NumberOfRvaAndSizes = image[
                                    self.offset['NumberOfRvaAndSizes']:self.offset['NumberOfRvaAndSizes'] + self.dword]
-class pe64_option_header:
+class pe64_optional_header:
     byte = 1
     word = 2
     dword = 4
@@ -216,7 +230,7 @@ class pe64_option_header:
         self.AddressOfEntryPoint = image[
                                    self.offset['AddressOfEntryPoint']:self.offset['AddressOfEntryPoint'] + self.dword]
         self.BaseOfCode = image[self.offset['BaseOfCode']:self.offset['BaseOfCode'] + self.dword]
-        self.BaseOfData = image[self.offset['BaseOfData']:self.offset['BaseOfData'] + self.dword]
+        #self.BaseOfData = image[self.offset['BaseOfData']:self.offset['BaseOfData'] + self.dword]
         self.ImageBase = image[self.offset['ImageBase']:self.offset['ImageBase'] + self.ulonglong]
         self.SectionAlignment = image[self.offset['SectionAlignment']:self.offset['SectionAlignment'] + self.dword]
         self.FileAlignment = image[self.offset['FileAlignment']:self.offset['FileAlignment'] + self.dword]
@@ -244,7 +258,7 @@ class pe64_option_header:
         self.LoaderFlags = image[self.offset['LoaderFlags']:self.offset['LoaderFlags'] + self.dword]
         self.NumberOfRvaAndSizes = image[
                                    self.offset['NumberOfRvaAndSizes']:self.offset['NumberOfRvaAndSizes'] + self.dword]
-class pe32_section_header:
+class pe_section_header:
     section_table = []
     _word = 2
     _dword = 4
@@ -284,6 +298,7 @@ class pe32_section_header:
         # return image[:pos]
         return image[:8]  # 定长八字节
         pass
+
 
 
 class pe32_section:
