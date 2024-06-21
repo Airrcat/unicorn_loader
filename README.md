@@ -11,3 +11,4 @@
 - [ ] RISCV
 - [ ] x86 demo
 - [ ] modify PE info
+- [ ] 通过PE识别自动判断ELF、PE，X86、X64
