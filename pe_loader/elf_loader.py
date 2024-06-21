@@ -1,10 +1,8 @@
 import unicorn.unicorn_const
 
 
-class pe_loader(object):
+class elf_loader(object):
     image = b''
-    IMAGE_SIZEOF_SIGNATURE = 4
-    IMAGE_SIZEOF_FILE_HEADER = 20
 
     def __init__(self, filename: str, mode: int):
 
@@ -58,7 +56,7 @@ class pe_loader(object):
         for i in range(section_num):
             raw_address = int.from_bytes(self.pe_section_header.section_table[i].PointerToRawData,'little')
             section = pe32_section(self.image[raw_address::])
-            section_list.append((section,self.image[section.PointerToRawData:section.PointerToRawData+section.SizeOfRawData]))
+            section_list.append(section)
             #section.Name = self.image[raw_address:raw_address+4]
             #section.VirtualSize = self.image[raw_address]
         #print("sections get.")
