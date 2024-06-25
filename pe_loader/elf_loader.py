@@ -13,91 +13,80 @@ class elf_loader(object):
             return
         if mode == unicorn.UC_MODE_32 or mode == unicorn.UC_MODE_64:
             self.mode = mode
-            #print("target : %s | mode code %s:" % (filename, mode))
+            # print("target : %s | mode code %s:" % (filename, mode))
         else:
             print("mode para error! just recvive UC_MODE_32 and UC_MODE_64")
 
         self.image = f.read()
-        #print("target read finish")
+        # print("target read finish")
         if mode == unicorn.UC_MODE_32:
             self.pe_dos_header = pe_dos_header(self.image)
-            self.pe_nt_header = pe_nt_header(self.image[int.from_bytes(self.pe_dos_header.e_lfanew, 'little'):])
+            self.pe_nt_header = pe_nt_header(
+                self.image[int.from_bytes(self.pe_dos_header.e_lfanew, 'little'):])
             self.pe_optional_header = pe32_optional_header(
                 self.image[int.from_bytes(self.pe_dos_header.e_lfanew, 'little') + 0x18:])
             offset_of_section_header = int.from_bytes(self.pe_dos_header.e_lfanew, 'little') + \
-                                 self.IMAGE_SIZEOF_SIGNATURE + \
-                                 self.IMAGE_SIZEOF_FILE_HEADER + \
-                                 int.from_bytes(self.pe_nt_header.SizeOfOptionalHeader, 'little')
+                self.IMAGE_SIZEOF_SIGNATURE + \
+                self.IMAGE_SIZEOF_FILE_HEADER + \
+                int.from_bytes(
+                    self.pe_nt_header.SizeOfOptionalHeader, 'little')
             self.pe_section_header = pe_section_header(
                 self.image[offset_of_section_header:offset_of_section_header + int.from_bytes(self.pe_nt_header.NumberOfSections,
-                                                                                  'little') * 40],
+                                                                                              'little') * 40],
                 int.from_bytes(self.pe_nt_header.NumberOfSections, 'little'))
         elif mode == unicorn.UC_MODE_64:
             self.pe_dos_header = pe_dos_header(self.image)
-            self.pe_nt_header = pe_nt_header(self.image[int.from_bytes(self.pe_dos_header.e_lfanew, 'little'):])
+            self.pe_nt_header = pe_nt_header(
+                self.image[int.from_bytes(self.pe_dos_header.e_lfanew, 'little'):])
             self.pe_optional_header = pe64_optional_header(
-            self.image[int.from_bytes(self.pe_dos_header.e_lfanew, 'little') + 0x18:])
+                self.image[int.from_bytes(self.pe_dos_header.e_lfanew, 'little') + 0x18:])
             offset_of_section_header = int.from_bytes(self.pe_dos_header.e_lfanew, 'little') + \
-                                       self.IMAGE_SIZEOF_SIGNATURE + \
-                                       self.IMAGE_SIZEOF_FILE_HEADER + \
-                                       int.from_bytes(self.pe_nt_header.SizeOfOptionalHeader, 'little')
+                self.IMAGE_SIZEOF_SIGNATURE + \
+                self.IMAGE_SIZEOF_FILE_HEADER + \
+                int.from_bytes(
+                    self.pe_nt_header.SizeOfOptionalHeader, 'little')
             self.pe_section_header = pe_section_header(
                 self.image[
-                offset_of_section_header:offset_of_section_header + int.from_bytes(self.pe_nt_header.NumberOfSections,
-                                                                                   'little') * 40],
+                    offset_of_section_header:offset_of_section_header + int.from_bytes(self.pe_nt_header.NumberOfSections,
+                                                                                       'little') * 40],
                 int.from_bytes(self.pe_nt_header.NumberOfSections, 'little'))
-        #print("pe loaded.")
+        # print("pe loaded.")
         f.close()
         pass
 
     def get_sections(self):
-        section_num = int.from_bytes(self.pe_nt_header.NumberOfSections,'little')
+        section_num = int.from_bytes(
+            self.pe_nt_header.NumberOfSections, 'little')
         section_list = []
         for i in range(section_num):
-            raw_address = int.from_bytes(self.pe_section_header.section_table[i].PointerToRawData,'little')
+            raw_address = int.from_bytes(
+                self.pe_section_header.section_table[i].PointerToRawData, 'little')
             section = pe32_section(self.image[raw_address::])
             section_list.append(section)
-            #section.Name = self.image[raw_address:raw_address+4]
-            #section.VirtualSize = self.image[raw_address]
-        #print("sections get.")
+            # section.Name = self.image[raw_address:raw_address+4]
+            # section.VirtualSize = self.image[raw_address]
+        # print("sections get.")
         return section_list
         pass
 
-class pe_dos_header:
+
+class Elf32_Ehdr:
 
     def __init__(self, image: bytes):
-        self.e_magic = image[0:2]
-        self.e_cblp = image[2:4]
-        self.e_cp = image[4:6]
-        self.e_crlc = image[6:8]
-        self.e_cparhdr = image[8:10]
-        self.e_minalloc = image[10:12]
-        self.e_maxalloc = image[12:14]
-        self.e_ss = image[14:16]
-        self.e_sp = image[16:18]
-        self.e_csum = image[18:20]
-        self.e_ip = image[20:22]
-        self.e_cs = image[22:24]
-        self.e_lfarlc = image[24:26]
-        self.e_ovno = image[26:28]
-        self.e_res = []
-        self.e_oemid = image[36:38]
-        self.e_oeminfo = image[40:42]
-        self.e_res2 = []
-        self.e_lfanew = image[60:64]
-
-
-class pe_nt_header:
-    # image请给到以nt_header为起始地址
-    def __init__(self, image: bytes):
-        self.DosStub = image[0:4]
-        self.Machine = image[4:6]
-        self.NumberOfSections = image[6:8]
-        self.TimeDataStamp = image[8:12]
-        self.PointerToSymbolTable = image[12:16]
-        self.NumberOfSymbols = image[16:20]
-        self.SizeOfOptionalHeader = image[20:22]
-        self.Characteristics = image[22:24]
+        self.e_ident = image[0:4]
+        self.e_type = image[2:4]
+        self.e_machine = image[4:6]
+        self.e_version = image[6:8]
+        self.e_entry = image[8:10]
+        self.e_phoff = image[10:12]
+        self.e_shoff = image[12:14]
+        self.e_flags = image[14:16]
+        self.e_ehsize = image[16:18]
+        self.e_phentsize = image[18:20]
+        self.e_phnum = image[20:22]
+        self.e_shentsize = image[22:24]
+        self.e_shnum = image[24:26]
+        self.e_shstrndx = image[26:28]
 
 
 class pe32_optional_header:
@@ -144,26 +133,26 @@ class pe32_optional_header:
         self.MinorLinkerVersion = image[self.offset['MinorLinkerVersion']:self.offset['MinorLinkerVersion'] + self.byte]
         self.SizeOfCode = image[self.offset['SizeOfCode']:self.offset['SizeOfCode'] + self.dword]
         self.SizeOfInitializedData = image[self.offset['SizeOfInitializedData']:self.offset[
-                                                                                    'SizeOfInitializedData'] + self.dword]
+            'SizeOfInitializedData'] + self.dword]
         self.SizeOfUninitializedData = image[self.offset['SizeOfUninitializedData']:self.offset[
-                                                                                        'SizeOfUninitializedData'] + self.dword]
+            'SizeOfUninitializedData'] + self.dword]
         self.AddressOfEntryPoint = image[
-                                   self.offset['AddressOfEntryPoint']:self.offset['AddressOfEntryPoint'] + self.dword]
+            self.offset['AddressOfEntryPoint']:self.offset['AddressOfEntryPoint'] + self.dword]
         self.BaseOfCode = image[self.offset['BaseOfCode']:self.offset['BaseOfCode'] + self.dword]
         self.BaseOfData = image[self.offset['BaseOfData']:self.offset['BaseOfData'] + self.dword]
         self.ImageBase = image[self.offset['ImageBase']:self.offset['ImageBase'] + self.dword]
         self.SectionAlignment = image[self.offset['SectionAlignment']:self.offset['SectionAlignment'] + self.dword]
         self.FileAlignment = image[self.offset['FileAlignment']:self.offset['FileAlignment'] + self.dword]
         self.MajorOperatingSystemVersion = image[self.offset['MajorOperatingSystemVersion']:self.offset[
-                                                                                                'MajorOperatingSystemVersion'] + self.word]
+            'MajorOperatingSystemVersion'] + self.word]
         self.MinorOperatingSystemVersion = image[self.offset['MinorOperatingSystemVersion']:self.offset[
-                                                                                                'MinorOperatingSystemVersion'] + self.word]
+            'MinorOperatingSystemVersion'] + self.word]
         self.MajorImageVersion = image[self.offset['MajorImageVersion']:self.offset['MajorImageVersion'] + self.word]
         self.MinorImageVersion = image[self.offset['MinorImageVersion']:self.offset['MinorImageVersion'] + self.word]
         self.MajorSubsystemVersion = image[self.offset['MajorSubsystemVersion']:self.offset[
-                                                                                    'MajorSubsystemVersion'] + self.word]
+            'MajorSubsystemVersion'] + self.word]
         self.MinorSubsystemVersion = image[self.offset['MinorSubsystemVersion']:self.offset[
-                                                                                    'MinorSubsystemVersion'] + self.word]
+            'MinorSubsystemVersion'] + self.word]
         self.Win32VersionValue = image[self.offset['Win32VersionValue']:self.offset['Win32VersionValue'] + self.dword]
         self.SizeOfImage = image[self.offset['SizeOfImage']:self.offset['SizeOfImage'] + self.dword]
         self.SizeOfHeaders = image[self.offset['SizeOfHeaders']:self.offset['SizeOfHeaders'] + self.dword]
@@ -171,13 +160,15 @@ class pe32_optional_header:
         self.SubSystem = image[self.offset['SubSystem']:self.offset['SubSystem'] + self.word]
         self.DllCharacteristics = image[self.offset['DllCharacteristics']:self.offset['DllCharacteristics'] + self.word]
         self.SizeOfStackReserve = image[
-                                  self.offset['SizeOfStackReserve']:self.offset['SizeOfStackReserve'] + self.dword]
+            self.offset['SizeOfStackReserve']:self.offset['SizeOfStackReserve'] + self.dword]
         self.SizeOfStackCommit = image[self.offset['SizeOfStackCommit']:self.offset['SizeOfStackCommit'] + self.dword]
         self.SizeOfHeapReserve = image[self.offset['SizeOfHeapReserve']:self.offset['SizeOfHeapReserve'] + self.dword]
         self.SizeOfHeapCommit = image[self.offset['SizeOfHeapCommit']:self.offset['SizeOfHeapCommit'] + self.dword]
         self.LoaderFlags = image[self.offset['LoaderFlags']:self.offset['LoaderFlags'] + self.dword]
         self.NumberOfRvaAndSizes = image[
-                                   self.offset['NumberOfRvaAndSizes']:self.offset['NumberOfRvaAndSizes'] + self.dword]
+            self.offset['NumberOfRvaAndSizes']:self.offset['NumberOfRvaAndSizes'] + self.dword]
+
+
 class pe64_optional_header:
     byte = 1
     word = 2
@@ -192,8 +183,8 @@ class pe64_optional_header:
         'SizeOfUninitializedData': 0xc,
         'AddressOfEntryPoint': 0x10,
         'BaseOfCode': 0x14,
-        #'BaseOfData': 0x18,
-        'ImageBase': 0x18, #
+        # 'BaseOfData': 0x18,
+        'ImageBase': 0x18,
         'SectionAlignment': 0x20,
         'FileAlignment': 0x24,
         'MajorOperatingSystemVersion': 0x28,
@@ -208,7 +199,7 @@ class pe64_optional_header:
         'CheckSum': 0x40,
         'SubSystem': 0x44,
         'DllCharacteristics': 0x46,
-        'SizeOfStackReserve': 0x48, #
+        'SizeOfStackReserve': 0x48,
         'SizeOfStackCommit': 0x50,
         'SizeOfHeapReserve': 0x58,
         'SizeOfHeapCommit': 0x60,
@@ -222,26 +213,26 @@ class pe64_optional_header:
         self.MinorLinkerVersion = image[self.offset['MinorLinkerVersion']:self.offset['MinorLinkerVersion'] + self.byte]
         self.SizeOfCode = image[self.offset['SizeOfCode']:self.offset['SizeOfCode'] + self.dword]
         self.SizeOfInitializedData = image[self.offset['SizeOfInitializedData']:self.offset[
-                                                                                    'SizeOfInitializedData'] + self.dword]
+            'SizeOfInitializedData'] + self.dword]
         self.SizeOfUninitializedData = image[self.offset['SizeOfUninitializedData']:self.offset[
-                                                                                        'SizeOfUninitializedData'] + self.dword]
+            'SizeOfUninitializedData'] + self.dword]
         self.AddressOfEntryPoint = image[
-                                   self.offset['AddressOfEntryPoint']:self.offset['AddressOfEntryPoint'] + self.dword]
+            self.offset['AddressOfEntryPoint']:self.offset['AddressOfEntryPoint'] + self.dword]
         self.BaseOfCode = image[self.offset['BaseOfCode']:self.offset['BaseOfCode'] + self.dword]
-        #self.BaseOfData = image[self.offset['BaseOfData']:self.offset['BaseOfData'] + self.dword]
+        # self.BaseOfData = image[self.offset['BaseOfData']:self.offset['BaseOfData'] + self.dword]
         self.ImageBase = image[self.offset['ImageBase']:self.offset['ImageBase'] + self.ulonglong]
         self.SectionAlignment = image[self.offset['SectionAlignment']:self.offset['SectionAlignment'] + self.dword]
         self.FileAlignment = image[self.offset['FileAlignment']:self.offset['FileAlignment'] + self.dword]
         self.MajorOperatingSystemVersion = image[self.offset['MajorOperatingSystemVersion']:self.offset[
-                                                                                                'MajorOperatingSystemVersion'] + self.word]
+            'MajorOperatingSystemVersion'] + self.word]
         self.MinorOperatingSystemVersion = image[self.offset['MinorOperatingSystemVersion']:self.offset[
-                                                                                                'MinorOperatingSystemVersion'] + self.word]
+            'MinorOperatingSystemVersion'] + self.word]
         self.MajorImageVersion = image[self.offset['MajorImageVersion']:self.offset['MajorImageVersion'] + self.word]
         self.MinorImageVersion = image[self.offset['MinorImageVersion']:self.offset['MinorImageVersion'] + self.word]
         self.MajorSubsystemVersion = image[self.offset['MajorSubsystemVersion']:self.offset[
-                                                                                    'MajorSubsystemVersion'] + self.word]
+            'MajorSubsystemVersion'] + self.word]
         self.MinorSubsystemVersion = image[self.offset['MinorSubsystemVersion']:self.offset[
-                                                                                    'MinorSubsystemVersion'] + self.word]
+            'MinorSubsystemVersion'] + self.word]
         self.Win32VersionValue = image[self.offset['Win32VersionValue']:self.offset['Win32VersionValue'] + self.dword]
         self.SizeOfImage = image[self.offset['SizeOfImage']:self.offset['SizeOfImage'] + self.dword]
         self.SizeOfHeaders = image[self.offset['SizeOfHeaders']:self.offset['SizeOfHeaders'] + self.dword]
@@ -249,13 +240,15 @@ class pe64_optional_header:
         self.SubSystem = image[self.offset['SubSystem']:self.offset['SubSystem'] + self.word]
         self.DllCharacteristics = image[self.offset['DllCharacteristics']:self.offset['DllCharacteristics'] + self.word]
         self.SizeOfStackReserve = image[
-                                  self.offset['SizeOfStackReserve']:self.offset['SizeOfStackReserve'] + self.ulonglong]
+            self.offset['SizeOfStackReserve']:self.offset['SizeOfStackReserve'] + self.ulonglong]
         self.SizeOfStackCommit = image[self.offset['SizeOfStackCommit']:self.offset['SizeOfStackCommit'] + self.ulonglong]
         self.SizeOfHeapReserve = image[self.offset['SizeOfHeapReserve']:self.offset['SizeOfHeapReserve'] + self.ulonglong]
         self.SizeOfHeapCommit = image[self.offset['SizeOfHeapCommit']:self.offset['SizeOfHeapCommit'] + self.ulonglong]
         self.LoaderFlags = image[self.offset['LoaderFlags']:self.offset['LoaderFlags'] + self.dword]
         self.NumberOfRvaAndSizes = image[
-                                   self.offset['NumberOfRvaAndSizes']:self.offset['NumberOfRvaAndSizes'] + self.dword]
+            self.offset['NumberOfRvaAndSizes']:self.offset['NumberOfRvaAndSizes'] + self.dword]
+
+
 class pe_section_header:
     section_table = []
     _word = 2
@@ -298,10 +291,9 @@ class pe_section_header:
         pass
 
 
-
 class pe32_section:
 
-    def __init__(self,image:bytes):
+    def __init__(self, image: bytes):
         self.Name = image[:8]
         self.VirtualSize = image[8:12]
         self.VirtualAddress = image[12:16]
@@ -315,5 +307,5 @@ class pe32_section:
         pass
 
 
-#pe = pe_loader("../attachment/1.exe", unicorn.UC_MODE_32)
-#pe.get_sections()
+# pe = pe_loader("../attachment/1.exe", unicorn.UC_MODE_32)
+# pe.get_sections()

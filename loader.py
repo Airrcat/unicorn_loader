@@ -8,7 +8,7 @@ def load(path:str,mode:int,arch:int) -> (Uc,pe_loader):
     sections = pe.get_sections()
     uc = Uc(arch,mode)
     for section,image in sections:
-        #image = pe.image[section.PointerToRawData:section.PointerToRawData+section.SizeOfRawData]
+        # image = pe.image[section.PointerToRawData:section.PointerToRawData+section.SizeOfRawData]
         uc.mem_map(section.VirtualAddress, section.VirtualSize)
         uc.mem_write(section.VirtualSize,image)
     return uc,pe

@@ -22,7 +22,7 @@ def trace(mu: Uc, address, size, data):
 
 anwsers = []
 for suffix in range(0,1009):
-    path = "attachment/binaries/"
+    path = "../attachment/binaries/"
     prefix = "binary"
     if suffix == 993:
         continue
@@ -67,5 +67,5 @@ for suffix in range(0,1009):
     del uc
     gc.collect()
 
-with open("attachment/binaries/anwser.txt","wb") as f:
+with open("../attachment/binaries/anwser.txt", "wb") as f:
     f.write(bytes(anwsers))
